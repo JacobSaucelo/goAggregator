@@ -1,16 +1,28 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 )
+
+type dataType struct {
+	Data []int `json:"data"`
+}
 
 var folderName = "data"
 
 func main() {
 	startNow := time.Now()
-	a := []int{1, 43, 65, 87, 12, 65, 8, 1, -1, 54, 0, 93, -12}
+	fpath := filepath.Join(folderName, "data.json")
+
+	data, err := readFile(fpath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	// c := make(chan int)
 	d := make(chan []int)
@@ -19,9 +31,9 @@ func main() {
 	// x, y := <-c, <-c
 	// fmt.Println("x", x, "y", y)
 
-	fpath := filepath.Join(folderName, "data.json")
-	go saveFile(fpath, a[:len(a)/2], d)
-	go saveFile(fpath, a[len(a)/2:], d)
+	fpath = filepath.Join(folderName+"/output", "data.json")
+	go saveFile(fpath, data.Data[:len(data.Data)/2], d)
+	go saveFile(fpath, data.Data[len(data.Data)/2:], d)
 	data1, data2 := <-d, <-d
 
 	fmt.Println("data1", data1, "data2", data2)
@@ -41,10 +53,27 @@ func sum(a []int, c chan int) {
 	c <- sum
 }
 
-func saveFile(fpath string, data []int, d chan []int) {
+func readFile(fpath string) (dataType, error) {
+	fmt.Println("reading... ", fpath)
+	saveFile, err := os.Open(fpath)
+	if err != nil {
+		fmt.Println("error opening file")
+		return dataType{}, err
+	}
+	defer saveFile.Close()
 
-	fmt.Println("fpath: ", fpath)
-	fmt.Println("data:", data)
+	decoder := json.NewDecoder(saveFile)
+	var data dataType
+	err = decoder.Decode(&data)
+	if err != nil {
+		fmt.Println("error decoding file")
+		return dataType{}, err
+	}
+
+	return data, nil
+}
+
+func saveFile(fpath string, data []int, d chan []int) {
 
 	d <- data
 	// saveFile, err := os.Open(fpath)
